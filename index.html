@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>RVR360 · Painel Operacional</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ══════════════════════════════════════════════
+   RVR360 · Design System Dark Premium
+   Paleta: #000 / #00BCD4 / #0D5C63
+══════════════════════════════════════════════ */
+:root {
+  --bg:         #000000;
+  --s1:         #060606;
+  --s2:         #0c0c0c;
+  --s3:         #141414;
+  --glass:      rgba(255,255,255,.03);
+  --glass-mid:  rgba(255,255,255,.05);
+  --glass-hi:   rgba(255,255,255,.08);
+  --glass-bd:   rgba(255,255,255,.10);
+  --glass-bd-s: rgba(255,255,255,.06);
+  --accent:     #00BCD4;
+  --accent-s:   rgba(0,188,212,.12);
+  --teal:       #0D5C63;
+  --gain:       #00E676;
+  --gain-s:     rgba(0,230,118,.10);
+  --cost:       #FF3B30;
+  --cost-s:     rgba(255,59,48,.08);
+  --amb:        #FFAB00;
+  --amb-s:      rgba(255,171,0,.08);
+  --pur:        #CE93D8;
+  --text:       #FFFFFF;
+  --text2:      #8895A7;
+  --text3:      #3E4E5A;
+  --blur:       blur(16px) saturate(180%);
+  --r:          10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; overflow-x: hidden; }
+body { padding-bottom: 80px; }
+
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  opacity: .35;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* ── HEADER ── */
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(0,0,0,.85);
+  backdrop-filter: var(--blur);
+  border-bottom: 1px solid var(--glass-bd-s);
+  padding: 14px 18px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.header-logo {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--teal), var(--accent));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: #fff;
+}
+.header-title { font-size: 15px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+.header-sub   { font-size: 9px; font-weight: 400; color: var(--text2); letter-spacing: 1.5px; text-transform: uppercase; }
+.header-user  { font-size: 11px; color: var(--text2); text-align: right; }
+.header-user strong { color: var(--accent); display: block; font-size: 12px; }
+
+/* ── VIEW TOGGLE ── */
+.view-toggle {
+  display: flex; gap: 4px;
+  padding: 10px 18px 6px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--glass-bd-s);
+  overflow-x: auto; scrollbar-width: none;
+}
+.view-toggle::-webkit-scrollbar { display: none; }
+.vt-btn {
+  padding: 6px 14px;
+  background: var(--glass); border: 1px solid var(--glass-bd-s);
+  border-radius: 20px; font-size: 10px; font-weight: 600;
+  color: var(--text2); cursor: pointer; white-space: nowrap;
+  transition: all .2s; letter-spacing: .5px;
+}
+.vt-btn.active {
+  background: var(--accent-s); border-color: rgba(0,188,212,.3);
+  color: var(--accent);
+}
+
+/* ── PERIOD SELECTOR ── */
+.period-bar {
+  display: flex; gap: 4px; padding: 10px 18px 8px;
+  overflow-x: auto; scrollbar-width: none;
+  background: var(--s1);
+}
+.period-bar::-webkit-scrollbar { display: none; }
+.pb-btn {
+  padding: 5px 12px; border-radius: 16px;
+  background: transparent; border: 1px solid var(--glass-bd-s);
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  cursor: pointer; transition: all .2s; white-space: nowrap;
+}
+.pb-btn.active { background: rgba(0,188,212,.08); border-color: var(--accent); color: var(--accent); }
+
+/* ── MAIN CONTENT ── */
+.main { padding: 14px 14px 20px; }
+.section-gap { height: 14px; }
+
+/* ── KPI STRIP ── */
+.kpi-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+@media (min-width: 480px) { .kpi-strip { grid-template-columns: repeat(4, 1fr); } }
+.kpi-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-bd-s);
+  border-radius: var(--r); padding: 13px 12px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+}
+.kpi-card.c-accent::before { background: linear-gradient(90deg, transparent, var(--accent), transparent); }
+.kpi-card.c-gain::before   { background: linear-gradient(90deg, transparent, var(--gain), transparent); }
+.kpi-card.c-amb::before    { background: linear-gradient(90deg, transparent, var(--amb), transparent); }
+.kpi-card.c-pur::before    { background: linear-gradient(90deg, transparent, var(--pur), transparent); }
+.kpi-card.c-cost::before   { background: linear-gradient(90deg, transparent, var(--cost), transparent); }
+.kpi-label { font-size: 8px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.kpi-val   { font-family: 'DM Mono', monospace; font-size: 1.5rem; font-weight: 300; line-height: 1; }
+.kpi-val.c-accent { color: var(--accent); }
+.kpi-val.c-gain   { color: var(--gain); }
+.kpi-val.c-amb    { color: var(--amb); }
+.kpi-val.c-pur    { color: var(--pur); }
+.kpi-val.c-cost   { color: var(--cost); }
+.kpi-sub  { font-size: 9px; color: var(--text3); margin-top: 4px; }
+.kpi-delta { font-size: 9px; margin-top: 3px; font-weight: 600; }
+.kpi-delta.up   { color: var(--gain); }
+.kpi-delta.down { color: var(--cost); }
+.kpi-delta.neu  { color: var(--text3); }
+
+/* ── CHART CARD ── */
+.chart-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-bd-s);
+  border-radius: var(--r);
+  padding: 16px 14px;
+  position: relative; overflow: hidden;
+  margin-bottom: 10px;
+}
+.chart-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,188,212,.4), transparent);
+}
+.chart-hd { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.chart-title { font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: -.2px; }
+.chart-sub   { font-size: 9px; color: var(--text2); margin-top: 2px; }
+.chart-badge { font-size: 9px; font-weight: 600; color: var(--accent); background: var(--accent-s); padding: 3px 8px; border-radius: 10px; }
+.chart-wrap  { position: relative; }
+
+/* ── RANKING LISTA ── */
+.rank-list { display: flex; flex-direction: column; gap: 7px; }
+.rank-item { display: flex; align-items: center; gap: 10px; }
+.rank-num  { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); width: 18px; text-align: center; flex-shrink: 0; }
+.rank-bar-wrap { flex: 1; }
+.rank-label { font-size: 11px; color: var(--text); margin-bottom: 3px; }
+.rank-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; }
+.rank-fill  { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(.16,1,.3,1); }
+.rank-val   { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text2); width: 40px; text-align: right; flex-shrink: 0; }
+
+/* ── ACTIVITY FEED ── */
+.feed-list { display: flex; flex-direction: column; gap: 0; }
+.feed-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-dot  { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.feed-body { flex: 1; }
+.feed-title { font-size: 11px; color: var(--text); }
+.feed-meta  { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.feed-time  { font-size: 9px; color: var(--text3); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+
+/* ── GESTOR: TEAM CARDS ── */
+.team-grid { display: flex; flex-direction: column; gap: 8px; }
+.team-card {
+  background: var(--glass); border: 1px solid var(--glass-bd-s);
+  border-radius: var(--r); padding: 13px 14px;
+  display: flex; align-items: center; gap: 12px;
+}
+.team-avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.team-info { flex: 1; min-width: 0; }
+.team-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.team-role { font-size: 9px; color: var(--text3); margin-top: 1px; }
+.team-stats { display: flex; gap: 12px; }
+.ts-item { text-align: center; }
+.ts-val  { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 300; color: var(--accent); }
+.ts-lbl  { font-size: 8px; color: var(--text3); letter-spacing: .5px; }
+.team-bar { height: 2px; background: rgba(255,255,255,.06); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.team-bar-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--accent)); border-radius: 2px; transition: width 1.2s cubic-bezier(.16,1,.3,1); }
+
+/* ── MÓDULOS UTILIZADOS ── */
+.mod-usage { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.mod-item {
+  background: var(--glass); border: 1px solid var(--glass-bd-s);
+  border-radius: 8px; padding: 10px 12px;
+}
+.mod-icon  { font-size: 16px; margin-bottom: 4px; }
+.mod-name  { font-size: 9px; font-weight: 700; color: var(--text2); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 4px; }
+.mod-count { font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 300; }
+.mod-bar   { height: 2px; background: rgba(255,255,255,.06); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.mod-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+/* ── LOADING ── */
+.loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 16px; }
+.loading-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid rgba(0,188,212,.15); border-top-color: var(--accent);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-txt { font-size: 11px; color: var(--text3); }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align: center; padding: 40px 20px; }
+.empty-icon  { font-size: 32px; margin-bottom: 10px; }
+.empty-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.empty-sub   { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+/* ── BOTTOM NAV ── */
+.bnav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(6,6,6,.92); backdrop-filter: var(--blur);
+  border-top: 1px solid var(--glass-bd-s);
+  display: flex; padding: 8px 0 12px; justify-content: space-around;
+}
+.bnav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: transparent; border: none; cursor: pointer;
+  padding: 4px 10px; flex: 1;
+}
+.bnav-icon  { font-size: 18px; line-height: 1; opacity: .5; transition: opacity .2s; }
+.bnav-label { font-size: 8px; font-weight: 600; letter-spacing: .5px; color: var(--text3); transition: color .2s; }
+.bnav-btn.active .bnav-icon  { opacity: 1; }
+.bnav-btn.active .bnav-label { color: var(--accent); }
+
+/* ── SECTION LABEL ── */
+.sec-label {
+  font-size: 8px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 10px; padding-left: 2px;
+}
+
+/* ── CHIP ── */
+.chip {
+  display: inline-block; padding: 3px 9px;
+  border-radius: 10px; font-size: 9px; font-weight: 600;
+  background: var(--accent-s); color: var(--accent); border: 1px solid rgba(0,188,212,.2);
+}
+.chip.gain { background: var(--gain-s); color: var(--gain); border-color: rgba(0,230,118,.2); }
+.chip.amb  { background: var(--amb-s); color: var(--amb); border-color: rgba(255,171,0,.2); }
+.chip.cost { background: var(--cost-s); color: var(--cost); border-color: rgba(255,59,48,.2); }
+
+/* ── IOC LINK BANNER ── */
+.ioc-link {
+  padding: 12px 14px;
+  background: rgba(0,188,212,.04);
+  border: 1px solid rgba(0,188,212,.12);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: background .2s;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+.ioc-link:active { background: rgba(0,188,212,.08); }
+.ioc-link-label  { font-size: 11px; font-weight: 600; color: var(--accent); }
+.ioc-link-sub    { font-size: 9px; color: var(--text3); margin-top: 2px; }
+.ioc-link-arrow  { font-size: 16px; color: var(--accent); }
+
+/* ── SCREEN PANELS ── */
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* Responsive */
+@media (min-width: 600px) {
+  .kpi-strip { grid-template-columns: repeat(4, 1fr); }
+  .mod-usage { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ══ HEADER ══ -->
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">360</div>
+    <div>
+      <div class="header-title">RVR360</div>
+      <div class="header-sub">Painel Operacional</div>
+    </div>
+  </div>
+  <div class="header-user">
+    <strong id="userName">—</strong>
+    <span id="userRole">consultor</span>
+  </div>
+</div>
+
+<!-- ══ VIEW TOGGLE ══ -->
+<div class="view-toggle" id="viewToggle">
+  <button class="vt-btn active" onclick="setView('individual', this)">👤 Meu Painel</button>
+  <button class="vt-btn" id="btnGestor" onclick="setView('gestor', this)" style="display:none;">👥 Equipe</button>
+</div>
+
+<!-- ══ PERIOD SELECTOR ══ -->
+<div class="period-bar">
+  <button class="pb-btn active" onclick="setPeriod(7,  this)">7 dias</button>
+  <button class="pb-btn"        onclick="setPeriod(15, this)">15 dias</button>
+  <button class="pb-btn"        onclick="setPeriod(30, this)">30 dias</button>
+  <button class="pb-btn"        onclick="setPeriod(90, this)">90 dias</button>
+</div>
+
+<!-- ══ LOADING ══ -->
+<div id="loadingWrap" class="loading-wrap">
+  <div class="loading-spinner"></div>
+  <div class="loading-txt">Carregando dados operacionais…</div>
+</div>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="loginScreen" style="display:none;padding:40px 24px;max-width:380px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <div style="font-size:32px;font-weight:900;color:var(--accent);margin-bottom:4px;">RVR360</div>
+    <div style="font-size:12px;color:var(--text2);">Painel Operacional de Performance</div>
+  </div>
+  <div style="margin-bottom:12px;">
+    <input id="loginEmail" type="email" placeholder="seu@email.com"
+      style="width:100%;padding:14px;background:var(--glass);border:1px solid var(--glass-bd-s);border-radius:8px;color:#fff;font-size:14px;font-family:Inter,sans-serif;">
+  </div>
+  <div style="margin-bottom:16px;">
+    <input id="loginPass" type="password" placeholder="Senha"
+      style="width:100%;padding:14px;background:var(--glass);border:1px solid var(--glass-bd-s);border-radius:8px;color:#fff;font-size:14px;font-family:Inter,sans-serif;">
+  </div>
+  <button onclick="fazerLogin()"
+    style="width:100%;padding:14px;background:var(--teal);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;">
+    Entrar no RVR360
+  </button>
+  <div id="loginErr" style="text-align:center;font-size:11px;color:var(--cost);margin-top:10px;display:none;"></div>
+</div>
+
+<!-- ══ MAIN DASHBOARD ══ -->
+<div id="dashContent" style="display:none;">
+
+  <!-- INDIVIDUAL VIEW -->
+  <div id="viewIndividual" class="screen active">
+    <div class="main">
+
+      <!-- KPI Strip -->
+      <div class="sec-label">Indicadores do Período</div>
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-card c-accent"><div class="kpi-label">Simulações IOC</div><div class="kpi-val c-accent" id="k-sim">—</div><div class="kpi-sub">análises realizadas</div></div>
+        <div class="kpi-card c-gain"><div class="kpi-label">Atendimentos</div><div class="kpi-val c-gain" id="k-leads">—</div><div class="kpi-sub">iniciados</div></div>
+        <div class="kpi-card c-amb"><div class="kpi-label">E-Books Enviados</div><div class="kpi-val c-amb" id="k-ebooks">—</div><div class="kpi-sub">materiais enviados</div></div>
+        <div class="kpi-card c-pur"><div class="kpi-label">Propostas</div><div class="kpi-val c-pur" id="k-prop">—</div><div class="kpi-sub">geradas</div></div>
+      </div>
+
+      <!-- Economia gerada -->
+      <div class="kpi-card c-gain" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div class="kpi-label">Economia IOC Demonstrada</div>
+            <div class="kpi-val c-gain" id="k-eco" style="font-size:2rem;">R$ —</div>
+            <div class="kpi-sub">soma das economias mensais apresentadas no período</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="kpi-label">Migrados CRM</div>
+            <div class="kpi-val c-accent" id="k-migr" style="font-size:1.3rem;">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Atividade diária -->
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Atividade Diária</div>
+            <div class="chart-sub">Simulações IOC + atendimentos por dia</div>
+          </div>
+          <div class="chart-badge" id="actTotal">—</div>
+        </div>
+        <div class="chart-wrap" style="height:160px;">
+          <canvas id="chartActivity"></canvas>
+        </div>
+      </div>
+
+      <!-- Modelos mais simulados + Perfis -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div class="chart-card" style="margin-bottom:0;">
+          <div class="chart-hd">
+            <div>
+              <div class="chart-title">Modelos</div>
+              <div class="chart-sub">mais simulados</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:140px;">
+            <canvas id="chartModelos"></canvas>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-bottom:0;">
+          <div class="chart-hd">
+            <div>
+              <div class="chart-title">Perfis SPIN</div>
+              <div class="chart-sub">por atendimento</div>
+            </div>
+          </div>
+          <div class="chart-wrap" style="height:140px;">
+            <canvas id="chartPerfis"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ranking modelos -->
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Ranking de Modelos</div>
+            <div class="chart-sub">simulações IOC por veículo</div>
+          </div>
+        </div>
+        <div class="rank-list" id="rankModelos">
+          <div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div></div>
+        </div>
+      </div>
+
+      <!-- Uso dos módulos -->
+      <div class="sec-label" style="margin-top:4px;">Utilização dos Módulos</div>
+      <div class="mod-usage" id="modUsage">
+        <div class="mod-item"><div class="mod-icon">⚡</div><div class="mod-name">IOC</div><div class="mod-count c-accent" id="mu-ioc">—</div><div class="mod-bar"><div class="mod-bar-fill" id="mb-ioc" style="width:0%;background:var(--accent);"></div></div></div>
+        <div class="mod-item"><div class="mod-icon">📖</div><div class="mod-name">E-Book</div><div class="mod-count c-amb" id="mu-ebook">—</div><div class="mod-bar"><div class="mod-bar-fill" id="mb-ebook" style="width:0%;background:var(--amb);"></div></div></div>
+        <div class="mod-item"><div class="mod-icon">📱</div><div class="mod-name">RVR Code</div><div class="mod-count c-gain" id="mu-qr">—</div><div class="mod-bar"><div class="mod-bar-fill" id="mb-qr" style="width:0%;background:var(--gain);"></div></div></div>
+        <div class="mod-item"><div class="mod-icon">💬</div><div class="mod-name">Propostas</div><div class="mod-count c-pur" id="mu-prop">—</div><div class="mod-bar"><div class="mod-bar-fill" id="mb-prop" style="width:0%;background:var(--pur);"></div></div></div>
+      </div>
+
+      <!-- Feed de atividade recente -->
+      <div class="chart-card" style="margin-top:10px;">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Atividade Recente</div>
+            <div class="chart-sub">últimas ações registradas</div>
+          </div>
+        </div>
+        <div class="feed-list" id="feedAtividade">
+          <div class="loading-wrap" style="padding:20px;"><div class="loading-spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- Link para V18 -->
+      <a class="ioc-link" href="https://app.rvremobil.com.br" target="_blank">
+        <div>
+          <div class="ioc-link-label">Abrir Plataforma RVR e-Mobil</div>
+          <div class="ioc-link-sub">V18+ · Motor IOC · Atendimento consultivo</div>
+        </div>
+        <div class="ioc-link-arrow">→</div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- GESTOR VIEW -->
+  <div id="viewGestor" class="screen">
+    <div class="main">
+
+      <div class="sec-label">Performance da Equipe</div>
+
+      <!-- KPI equipe -->
+      <div class="kpi-strip" id="kpiGestor" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="kpi-card c-accent"><div class="kpi-label">Total Simulações</div><div class="kpi-val c-accent" id="g-sim">—</div><div class="kpi-sub">equipe no período</div></div>
+        <div class="kpi-card c-gain"><div class="kpi-label">Atendimentos</div><div class="kpi-val c-gain" id="g-leads">—</div><div class="kpi-sub">equipe no período</div></div>
+        <div class="kpi-card c-amb"><div class="kpi-label">E-Books</div><div class="kpi-val c-amb" id="g-ebooks">—</div><div class="kpi-sub">enviados equipe</div></div>
+      </div>
+
+      <!-- Comparativo equipe: barras -->
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Simulações IOC por Consultor</div>
+            <div class="chart-sub">performance comparativa da equipe</div>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="chartEquipe"></canvas>
+        </div>
+      </div>
+
+      <!-- Distribuição modelos equipe -->
+      <div class="chart-card">
+        <div class="chart-hd">
+          <div>
+            <div class="chart-title">Modelos Mais Simulados · Equipe</div>
+            <div class="chart-sub">distribuição por veículo</div>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:180px;">
+          <canvas id="chartModelosEquipe"></canvas>
+        </div>
+      </div>
+
+      <!-- Cards consultores -->
+      <div class="sec-label">Consultores da Equipe</div>
+      <div class="team-grid" id="teamGrid">
+        <div class="loading-wrap" style="padding:20px;"><div class="loading-spinner"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bnav">
+  <button class="bnav-btn active" onclick="setTab('individual',this)">
+    <span class="bnav-icon">📊</span>
+    <span class="bnav-label">Painel</span>
+  </button>
+  <button class="bnav-btn" onclick="setTab('modulos',this)">
+    <span class="bnav-icon">⚡</span>
+    <span class="bnav-label">Módulos</span>
+  </button>
+  <button class="bnav-btn" onclick="setTab('feed',this)">
+    <span class="bnav-icon">🔔</span>
+    <span class="bnav-label">Atividade</span>
+  </button>
+  <button class="bnav-btn" onclick="setTab('config',this)">
+    <span class="bnav-icon">⚙️</span>
+    <span class="bnav-label">Config</span>
+  </button>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT ENGINE
+══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── Supabase config (mesma instância da V18) ────────────
+const SB_URL = 'https://cijnwfnklycxrfsdbktn.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpam53Zm5rbHljeHJmc2Ria3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyODY5MTksImV4cCI6MjA5NDg2MjkxOX0.99tILmmNproTIZUzA-dFZP4xAQbv2qRIbvxglDAM1So';
+
+let _session  = null;
+let _consultor = null;
+let _period   = 7;
+let _view     = 'individual';
+let _charts   = {};
+
+// ── Supabase client ────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SB_URL, SB_KEY);
+
+// ── Helpers ────────────────────────────────────────────
+const fmtN  = (n) => n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
+const fmtR  = (v) => 'R$ ' + Math.round(v).toLocaleString('pt-BR');
+const fmtPct= (v) => v.toFixed(0)+'%';
+const dateFrom = (days) => {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString();
+};
+const timeAgo = (iso) => {
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60)   return 'agora';
+  if (diff < 3600) return Math.floor(diff/60) + 'min';
+  if (diff < 86400)return Math.floor(diff/3600) + 'h';
+  return Math.floor(diff/86400) + 'd';
+};
+const sbGet = async (path) => {
+  const headers = { 'apikey': SB_KEY, 'Authorization': `Bearer ${_session?.access_token || SB_KEY}` };
+  const res = await fetch(SB_URL + path, { headers });
+  return res.ok ? res.json() : [];
+};
+const show = (id) => document.getElementById(id).style.display = '';
+const hide = (id) => document.getElementById(id).style.display = 'none';
+
+// ── Chart defaults (Dark Premium) ─────────────────────
+Chart.defaults.color      = '#8895A7';
+Chart.defaults.font.family = 'Inter';
+Chart.defaults.font.size   = 10;
+
+const CHART_COLORS = [
+  '#00BCD4','#00E676','#FFAB00','#CE93D8',
+  '#FF3B30','#26C6DA','#69F0AE','#FFD54F',
+];
+
+function destroyChart(id) {
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+}
+
+// ── AUTH ───────────────────────────────────────────────
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    _session = session;
+    await loadConsultor();
+  } else {
+    hide('loadingWrap');
+    show('loginScreen');
+  }
+}
+
+async function fazerLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginErr');
+  errEl.style.display = 'none';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) {
+    errEl.textContent = 'Credenciais inválidas. Verifique e tente novamente.';
+    errEl.style.display = 'block';
+    return;
+  }
+  _session = data.session;
+  await loadConsultor();
+}
+
+async function loadConsultor() {
+  const data = await sbGet(`/rest/v1/consultores?id=eq.${_session.user.id}&select=*`);
+  _consultor = Array.isArray(data) ? data[0] : null;
+
+  document.getElementById('userName').textContent = _consultor?.nome || _session.user.email.split('@')[0];
+  document.getElementById('userRole').textContent  = _consultor?.role === 'manager' ? 'gestor' : 'consultor';
+
+  // Mostrar aba gestor se aplicável
+  if (_consultor?.role === 'manager' || _consultor?.role === 'admin') {
+    document.getElementById('btnGestor').style.display = '';
+  }
+
+  hide('loadingWrap');
+  hide('loginScreen');
+  show('dashContent');
+
+  await loadDashboard();
+}
+
+// ── PERIOD / VIEW ──────────────────────────────────────
+function setPeriod(days, btn) {
+  _period = days;
+  document.querySelectorAll('.pb-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadDashboard();
+}
+
+function setView(view, btn) {
+  _view = view;
+  document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('viewIndividual').classList.toggle('active', view === 'individual');
+  document.getElementById('viewGestor').classList.toggle('active', view === 'gestor');
+  loadDashboard();
+}
+
+function setTab(tab, btn) {
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // Tab switching handled by view toggle for now
+}
+
+// ── MAIN DATA LOADER ──────────────────────────────────
+async function loadDashboard() {
+  const desde = dateFrom(_period);
+  if (_view === 'individual') {
+    await Promise.all([
+      loadKPIs(desde),
+      loadAtividadeDiaria(desde),
+      loadModelosChart(desde),
+      loadPerfisChart(desde),
+      loadRankModelos(desde),
+      loadModUsage(desde),
+      loadFeed(desde),
+    ]);
+  } else {
+    await Promise.all([
+      loadKPIsGestor(desde),
+      loadEquipeChart(desde),
+      loadModelosEquipeChart(desde),
+      loadTeamCards(desde),
+    ]);
+  }
+}
+
+// ── KPIs INDIVIDUAIS ──────────────────────────────────
+async function loadKPIs(desde) {
+  const cid = _consultor?.id;
+
+  const [events, leads, atend] = await Promise.all([
+    sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&select=type,payload,created_at`),
+    sbGet(`/rest/v1/leads?created_at=gte.${desde}&consultor_id=eq.${cid}&select=economia,modelo,created_at`),
+    sbGet(`/rest/v1/crm_atendimentos?created_at=gte.${desde}&consultor_id=eq.${cid}&select=status_migracao,economia_mensal`),
+  ]);
+
+  const evArr  = Array.isArray(events) ? events : [];
+  const ldArr  = Array.isArray(leads)  ? leads  : [];
+  const atArr  = Array.isArray(atend)  ? atend  : [];
+
+  const sims   = evArr.filter(e => e.type === 'SIMULATION_USED').length;
+  const ebooks = evArr.filter(e => e.type === 'EBOOK_SENT').length;
+  const props  = evArr.filter(e => e.type === 'WA_CLICKED').length;
+  const migr   = atArr.filter(a => a.status_migracao === 'Migrado para CRM').length;
+
+  const ecoTotal = ldArr.reduce((s, l) => s + (parseFloat(l.economia) || 0), 0)
+    + atArr.reduce((s, a) => s + (parseFloat(a.economia_mensal) || 0), 0);
+
+  setText('k-sim',   fmtN(sims));
+  setText('k-leads', fmtN(ldArr.length));
+  setText('k-ebooks',fmtN(ebooks));
+  setText('k-prop',  fmtN(props));
+  setText('k-eco',   fmtR(ecoTotal));
+  setText('k-migr',  fmtN(migr));
+  setText('actTotal', sims + ldArr.length + ebooks + ' ações');
+}
+
+// ── ATIVIDADE DIÁRIA (Bar chart) ──────────────────────
+async function loadAtividadeDiaria(desde) {
+  const cid = _consultor?.id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&select=type,created_at`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  // Build daily buckets
+  const days = _period <= 15 ? _period : (_period <= 30 ? 30 : 90);
+  const labels = [], simData = [], leadData = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    labels.push(key.slice(5)); // MM-DD
+    const dayEvs = evArr.filter(e => e.created_at?.slice(0, 10) === key);
+    simData.push(dayEvs.filter(e => e.type === 'SIMULATION_USED').length);
+    leadData.push(dayEvs.filter(e => e.type === 'EBOOK_SENT' || e.type === 'WA_CLICKED').length);
+  }
+
+  destroyChart('activity');
+  const ctx = document.getElementById('chartActivity').getContext('2d');
+  _charts['activity'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Simulações IOC', data: simData, backgroundColor: 'rgba(0,188,212,.7)', borderRadius: 4, borderSkipped: false },
+        { label: 'E-Books/WA',     data: leadData, backgroundColor: 'rgba(0,230,118,.5)', borderRadius: 4, borderSkipped: false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { boxWidth: 8, padding: 12, font: { size: 9 } } } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { maxRotation: 0, font: { size: 8 }, maxTicksLimit: 10 } },
+        y: { grid: { color: 'rgba(255,255,255,.06)' }, ticks: { stepSize: 1, font: { size: 9 } }, beginAtZero: true },
+      }
+    }
+  });
+}
+
+// ── MODELOS (Doughnut) ────────────────────────────────
+async function loadModelosChart(desde) {
+  const cid    = _consultor?.id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&type=eq.SIMULATION_USED&select=payload`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  const counts = {};
+  evArr.forEach(e => {
+    const v = e.payload?.modelo || e.payload?.vehicle || 'Outros';
+    const key = v.split(' ').slice(0,2).join(' ');
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 6);
+  if (!sorted.length) { renderEmptyChart('chartModelos'); return; }
+
+  destroyChart('modelos');
+  const ctx = document.getElementById('chartModelos').getContext('2d');
+  _charts['modelos'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels:   sorted.map(([k]) => k),
+      datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: CHART_COLORS, borderWidth: 1, borderColor: '#000' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 8, font: { size: 8 } } } },
+    }
+  });
+}
+
+// ── PERFIS SPIN (Pie) ─────────────────────────────────
+async function loadPerfisChart(desde) {
+  const cid   = _consultor?.id;
+  const leads = await sbGet(`/rest/v1/leads?created_at=gte.${desde}&consultor_id=eq.${cid}&select=perfil_comportamental`);
+  const arr   = Array.isArray(leads) ? leads.filter(l => l.perfil_comportamental) : [];
+
+  if (!arr.length) { renderEmptyChart('chartPerfis'); return; }
+
+  const counts = {};
+  arr.forEach(l => { const k = l.perfil_comportamental; counts[k] = (counts[k]||0)+1; });
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+
+  const icons = { racional:'📊',tecnico:'⚙️',economico:'💰',familiar:'👨‍👩‍👧',aspiracional:'✨',conservador:'🛡️',tecnologico:'📱' };
+
+  destroyChart('perfis');
+  const ctx = document.getElementById('chartPerfis').getContext('2d');
+  _charts['perfis'] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels:   sorted.map(([k]) => (icons[k]||'') + ' ' + k),
+      datasets: [{ data: sorted.map(([,v])=>v), backgroundColor: CHART_COLORS, borderWidth: 1, borderColor: '#000' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 6, font: { size: 8 } } } },
+    }
+  });
+}
+
+// ── RANKING MODELOS ────────────────────────────────────
+async function loadRankModelos(desde) {
+  const cid    = _consultor?.id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&type=eq.SIMULATION_USED&select=payload`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  const counts = {};
+  evArr.forEach(e => {
+    const v = e.payload?.modelo || e.payload?.vehicle || 'Outros';
+    counts[v] = (counts[v]||0)+1;
+  });
+
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxVal = sorted[0]?.[1] || 1;
+  const el = document.getElementById('rankModelos');
+
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">Sem simulações no período</div></div>';
+    return;
+  }
+
+  el.innerHTML = sorted.map(([nome, val], i) => `
+    <div class="rank-item">
+      <div class="rank-num">${i+1}</div>
+      <div class="rank-bar-wrap">
+        <div class="rank-label">${nome}</div>
+        <div class="rank-track">
+          <div class="rank-fill" style="width:0%;background:${CHART_COLORS[i%8]};" data-w="${(val/maxVal*100).toFixed(0)}"></div>
+        </div>
+      </div>
+      <div class="rank-val">${val}x</div>
+    </div>
+  `).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.rank-fill[data-w]').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 100);
+}
+
+// ── MÓDULOS USAGE ─────────────────────────────────────
+async function loadModUsage(desde) {
+  const cid    = _consultor?.id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&select=type`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  const ioc   = evArr.filter(e=>e.type==='SIMULATION_USED').length;
+  const ebook = evArr.filter(e=>e.type==='EBOOK_SENT'||e.type==='EBOOK_OPENED').length;
+  const qr    = evArr.filter(e=>e.type?.includes('QR')).length;
+  const prop  = evArr.filter(e=>e.type==='WA_CLICKED'||e.type==='PROPOSAL_VIEWED').length;
+
+  const maxV = Math.max(ioc, ebook, qr, prop, 1);
+
+  setText('mu-ioc',  fmtN(ioc));
+  setText('mu-ebook',fmtN(ebook));
+  setText('mu-qr',   fmtN(qr));
+  setText('mu-prop', fmtN(prop));
+
+  setTimeout(() => {
+    setWidth('mb-ioc',   (ioc/maxV*100).toFixed(0)+'%');
+    setWidth('mb-ebook', (ebook/maxV*100).toFixed(0)+'%');
+    setWidth('mb-qr',    (qr/maxV*100).toFixed(0)+'%');
+    setWidth('mb-prop',  (prop/maxV*100).toFixed(0)+'%');
+  }, 200);
+}
+
+// ── FEED DE ATIVIDADE ─────────────────────────────────
+async function loadFeed(desde) {
+  const cid    = _consultor?.id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&consultor_id=eq.${cid}&select=type,payload,created_at&order=created_at.desc&limit=20`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  const el = document.getElementById('feedAtividade');
+
+  if (!evArr.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">🔔</div><div class="empty-title">Sem atividades no período</div></div>';
+    return;
+  }
+
+  const typeConfig = {
+    'SIMULATION_USED':  { label: 'Simulação IOC realizada',  color: 'var(--accent)', icon: '⚡' },
+    'EBOOK_SENT':       { label: 'RVR E-Book enviado',       color: 'var(--amb)',    icon: '📖' },
+    'EBOOK_OPENED':     { label: 'E-Book aberto pelo cliente',color: 'var(--gain)',   icon: '👁️' },
+    'EBOOK_RETURN':     { label: 'Cliente retornou do E-Book',color: 'var(--gain)',   icon: '↩️' },
+    'WA_CLICKED':       { label: 'Proposta enviada via WA',  color: 'var(--pur)',    icon: '💬' },
+    'PROPOSAL_VIEWED':  { label: 'Proposta visualizada',     color: 'var(--pur)',    icon: '👀' },
+  };
+
+  el.innerHTML = evArr.slice(0, 15).map(e => {
+    const cfg = typeConfig[e.type] || { label: e.type, color: 'var(--text3)', icon: '●' };
+    const modelo = e.payload?.modelo || e.payload?.vehicle || '';
+    return `
+      <div class="feed-item">
+        <div class="feed-dot" style="background:${cfg.color};"></div>
+        <div class="feed-body">
+          <div class="feed-title">${cfg.icon} ${cfg.label}</div>
+          ${modelo ? `<div class="feed-meta">${modelo}</div>` : ''}
+        </div>
+        <div class="feed-time">${timeAgo(e.created_at)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// GESTOR VIEW
+// ═══════════════════════════════════════════════════════
+
+async function loadKPIsGestor(desde) {
+  const tid = _consultor?.tenant_id;
+  const [events, leads] = await Promise.all([
+    sbGet(`/rest/v1/events?created_at=gte.${desde}&tenant_id=eq.${tid}&select=type`),
+    sbGet(`/rest/v1/leads?created_at=gte.${desde}&tenant_id=eq.${tid}&select=id`),
+  ]);
+  const evArr = Array.isArray(events) ? events : [];
+  const ldArr = Array.isArray(leads)  ? leads  : [];
+
+  setText('g-sim',    fmtN(evArr.filter(e=>e.type==='SIMULATION_USED').length));
+  setText('g-leads',  fmtN(ldArr.length));
+  setText('g-ebooks', fmtN(evArr.filter(e=>e.type==='EBOOK_SENT').length));
+}
+
+async function loadEquipeChart(desde) {
+  const tid  = _consultor?.tenant_id;
+  const [consultores, events] = await Promise.all([
+    sbGet(`/rest/v1/consultores?tenant_id=eq.${tid}&ativo=eq.true&select=id,nome`),
+    sbGet(`/rest/v1/events?created_at=gte.${desde}&tenant_id=eq.${tid}&type=eq.SIMULATION_USED&select=consultor_id`),
+  ]);
+
+  const consArr = Array.isArray(consultores) ? consultores : [];
+  const evArr   = Array.isArray(events)      ? events      : [];
+
+  const counts = {};
+  consArr.forEach(c => { counts[c.id] = { nome: c.nome || 'Consultor', val: 0 }; });
+  evArr.forEach(e => { if (counts[e.consultor_id]) counts[e.consultor_id].val++; });
+
+  const sorted = Object.values(counts).sort((a,b)=>b.val-a.val);
+
+  destroyChart('equipe');
+  const ctx = document.getElementById('chartEquipe').getContext('2d');
+  _charts['equipe'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels:   sorted.map(c => c.nome.split(' ')[0]),
+      datasets: [{ label: 'Simulações IOC', data: sorted.map(c=>c.val),
+        backgroundColor: sorted.map((_,i) => CHART_COLORS[i%8]),
+        borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,.04)' }, beginAtZero: true },
+        y: { grid: { display: false } },
+      }
+    }
+  });
+}
+
+async function loadModelosEquipeChart(desde) {
+  const tid    = _consultor?.tenant_id;
+  const events = await sbGet(`/rest/v1/events?created_at=gte.${desde}&tenant_id=eq.${tid}&type=eq.SIMULATION_USED&select=payload`);
+  const evArr  = Array.isArray(events) ? events : [];
+
+  const counts = {};
+  evArr.forEach(e => {
+    const k = (e.payload?.modelo||e.payload?.vehicle||'Outros').split(' ').slice(0,2).join(' ');
+    counts[k] = (counts[k]||0)+1;
+  });
+
+  const sorted = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if (!sorted.length) return;
+
+  destroyChart('modelosEquipe');
+  const ctx = document.getElementById('chartModelosEquipe').getContext('2d');
+  _charts['modelosEquipe'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels:   sorted.map(([k])=>k),
+      datasets: [{ data: sorted.map(([,v])=>v), backgroundColor: CHART_COLORS, borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font:{size:8}, maxRotation: 30 } },
+        y: { grid: { color:'rgba(255,255,255,.04)' }, beginAtZero: true },
+      }
+    }
+  });
+}
+
+async function loadTeamCards(desde) {
+  const tid = _consultor?.tenant_id;
+  const [consultores, events, leads] = await Promise.all([
+    sbGet(`/rest/v1/consultores?tenant_id=eq.${tid}&ativo=eq.true&select=id,nome,email`),
+    sbGet(`/rest/v1/events?created_at=gte.${desde}&tenant_id=eq.${tid}&select=consultor_id,type`),
+    sbGet(`/rest/v1/leads?created_at=gte.${desde}&tenant_id=eq.${tid}&select=consultor_id`),
+  ]);
+
+  const consArr = Array.isArray(consultores) ? consultores : [];
+  const evArr   = Array.isArray(events)      ? events      : [];
+  const ldArr   = Array.isArray(leads)       ? leads       : [];
+
+  const maxSims = Math.max(1, ...consArr.map(c =>
+    evArr.filter(e=>e.consultor_id===c.id&&e.type==='SIMULATION_USED').length));
+
+  const el = document.getElementById('teamGrid');
+  if (!consArr.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum consultor encontrado</div></div>';
+    return;
+  }
+
+  el.innerHTML = consArr.map(c => {
+    const sims   = evArr.filter(e=>e.consultor_id===c.id&&e.type==='SIMULATION_USED').length;
+    const ebooks = evArr.filter(e=>e.consultor_id===c.id&&e.type==='EBOOK_SENT').length;
+    const lCount = ldArr.filter(l=>l.consultor_id===c.id).length;
+    const pct    = (sims/maxSims*100).toFixed(0);
+    const initials = (c.nome||c.email||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+
+    return `
+      <div class="team-card">
+        <div class="team-avatar">${initials}</div>
+        <div class="team-info" style="flex:1;">
+          <div class="team-name">${c.nome || c.email}</div>
+          <div class="team-role">Consultor</div>
+          <div class="team-bar"><div class="team-bar-fill" data-w="${pct}" style="width:0%;"></div></div>
+        </div>
+        <div class="team-stats">
+          <div class="ts-item"><div class="ts-val">${sims}</div><div class="ts-lbl">IOC</div></div>
+          <div class="ts-item"><div class="ts-val">${lCount}</div><div class="ts-lbl">Leads</div></div>
+          <div class="ts-item"><div class="ts-val">${ebooks}</div><div class="ts-lbl">Books</div></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  setTimeout(() => {
+    document.querySelectorAll('.team-bar-fill[data-w]').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 150);
+}
+
+// ── DOM Helpers ───────────────────────────────────────
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function setWidth(id, w) {
+  const el = document.getElementById(id);
+  if (el) el.style.width = w;
+}
+function renderEmptyChart(canvasId) {
+  const ctx = document.getElementById(canvasId)?.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, 999, 999);
+  ctx.font = '11px Inter';
+  ctx.fillStyle = '#3E4E5A';
+  ctx.textAlign = 'center';
+  ctx.fillText('Sem dados no período', ctx.canvas.width/2, ctx.canvas.height/2);
+}
+
+// ── BOOT ─────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
